@@ -1,0 +1,6 @@
+deploy.sh
+nginx.conf
+.gitlab-ci.yml
+.DS_Store
+.idea
+.vscode
