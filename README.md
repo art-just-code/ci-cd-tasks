@@ -1,9 +1,40 @@
-docker - ci/cd pipline with release and deploy use by docker
+# Sausage Store
 
-Java backend + Angular frontend, postgreSQL + MongoDB databases
+![image](https://user-images.githubusercontent.com/9394918/121517767-69db8a80-c9f8-11eb-835a-e98ca07fd995.png)
 
-Сборки бэкенда и фронтенда происходят в джобах build, сборщик gcr.io/kaniko-project/executor:v1.9.0-debug
-Далее тесты, для бэка добавлен -Dmaven.test.skip=true чтобы Сонар не лез в бд
-Далее релиз в хранилище Gitlab Container Registry
-Далее деплой из этого хранилища на вм
 
+## Technologies used
+
+* Frontend – TypeScript, Angular.
+* Backend  – Java 16, Spring Boot, Spring Data.
+* Database – H2.
+
+## Installation guide
+### Backend
+
+Install Java 16 and maven and run:
+
+```bash
+cd backend
+mvn package
+cd target
+java -jar sausage-store-0.0.1-SNAPSHOT.jar
+```
+
+### Frontend
+
+Install NodeJS and npm on your computer and run:
+
+```bash
+cd frontend
+npm install
+npm run build
+npm install -g http-server
+sudo http-server ./dist/frontend/ -p 80 --proxy http://localhost:8080
+```
+
+Then open your browser and go to [http://localhost](http://localhost)
+
+### Vault
+
+Run Vault docker container, create secrets, init operator, etc. 

@@ -83,9 +83,12 @@ release:
 
 deploy-backend:
   stage: deploy
-  image: alpine:3.18
+  image: vault:1.11.3
+  variables:
+    SPRING_CLOUD_VAULT_ENABLED: false
+
   before_script:
-    - apk add openssh-client bash gettext # gettext позволяет работать дальше envsubst
+    - apk add openssh-client bash gettext
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
@@ -94,6 +97,17 @@ deploy-backend:
     - chmod 644 ~/.ssh/known_hosts
 # подставим переменные в скрипт deploy.sh и выполним его на целевом хосте, где развернем сосисочный бэкенд
   script:
+    - export VAULT_TOKEN="$(vault write -field=token auth/jwt/login role=sausage-store jwt=$CI_JOB_JWT)"
+    - export "VERSION=${VERSION}"
+    - export "CI_REGISTRY=${CI_REGISTRY}"
+    - export "CI_REGISTRY_USER=${CI_REGISTRY_USER}"
+    - export "CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD}"
+    - export "CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE}"
+    - export "SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}"
+    - export "SPRING_DATASOURCE_USERNAME=$(vault kv get -field=spring.datasource.username secret/sausage-store)"
+    - export "SPRING_DATASOURCE_PASSWORD=$(vault kv get -field=spring.datasource.password secret/sausage-store)"
+    - export "SPRING_DATA_MONGODB_URI=$(vault kv get -field=spring.data.mongodb.uri secret/sausage-store)"
+    - export "SPRING_CLOUD_VAULT_TOKEN=$VAULT_TOKEN"
     - envsubst < ./backend/deploy.sh | ssh ${DEV_USER}@${DEV_HOST}
 
 telegram-notification-backend:

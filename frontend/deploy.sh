@@ -6,7 +6,7 @@ sudo docker network create -d bridge sausage_network || true # пробуем с
 sudo docker rm -f sausage-frontend || true
 sudo docker run -d --name sausage-frontend \
     -p 80:80 \
-    -v "/tmp/${CI_PROJECT_DIR}/frontend/default.conf:/etc/nginx/conf.d/default.conf" \
+    -v "/home/student/default.conf:/etc/nginx/conf.d/default.conf" \
     --restart=on-failure:10 \
     --restart=always \
     --network=sausage_network \
