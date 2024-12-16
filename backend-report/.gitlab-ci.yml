@@ -1,0 +1,69 @@
+stages:
+  - build
+  - test
+  - release
+  - deploy
+
+include:
+  remote: 'https://gitlab.com/gitlab-org/gitlab/-/raw/2851f4d5/lib/gitlab/ci/templates/Jobs/SAST.latest.gitlab-ci.yml'
+
+variables:
+  VERSION: 1.0.${CI_PIPELINE_ID}
+
+build:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:v1.9.0-debug
+    entrypoint: [""]
+  # переменные CI_REGISTRY_USER, CI_REGISTRY_PASSWORD, CI_REGISTRY генерятся Гитлабом
+  script:
+    - echo "test"
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/backend-report"
+      --dockerfile "${CI_PROJECT_DIR}/backend-report/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}/sausage-backend-report:$CI_COMMIT_SHA"
+      --build-arg DB=${REPORTS_MONGODB_URI} --build-arg PORT=8080 --build-arg VERSION=${VERSION}
+      --cache=true
+
+semgrep-sast:
+  stage: test
+  needs:
+    - build
+
+nodejs-scan-sast:
+  rules:
+  - when: never
+
+release:
+  variables:
+    GIT_STRATEGY: none
+  image:
+    name: gcr.io/go-containerregistry/crane:debug
+    entrypoint: [ "" ]
+  cache: [ ]
+  stage: release
+  before_script:
+    - crane auth login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - crane tag $CI_REGISTRY_IMAGE/sausage-backend-report:$CI_COMMIT_SHA $VERSION
+
+deploy-backend-report:
+  stage: deploy
+  image: docker:24.0.7-alpine3.19
+  before_script:
+    - apk add openssh-client bash gettext
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+    - docker context create remote --description "remote ssh" --docker "host=ssh://${DEV_USER}@${DEV_HOST}"
+# подставим переменные в скрипт deploy.sh и выполним его на целевом хосте, где развернем сосисочный бэкенд
+  script:
+    - echo "VERSION=${VERSION}" >> .env
+    - echo "PORT=8080" >> .env
+    - echo "DB=${REPORTS_MONGODB_URI}" >> .env
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - docker --context remote compose down backend-report || true
+    - docker --context remote compose --env-file .env up backend-report -d --pull "always" --force-recreate

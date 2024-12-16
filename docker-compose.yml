@@ -1,0 +1,43 @@
+version: "3.8"
+# docker-composes работает с сервисами. 1 сервис = 1 контейнер.
+services:
+    # 3 сервиса - backend, frontend, backend-report
+    backend:
+        image: ${CI_REGISTRY_IMAGE}/sausage-backend:${CI_COMMIT_SHA}
+        # gitlab.praktikum-services.ru:5050/std-033-68/sausage-store/sausage-backend:1.0.1685299
+        # бэкенд будет доступен для соседей по этому имени
+        container_name: sausage-store-backend
+        environment:
+            # Переменные из application.properties можно заменить переменными окружения
+            SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+            SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+            SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+            SPRING_DATA_MONGODB_URI: ${SPRING_DATA_MONGODB_URI}
+            SPRING_CLOUD_VAULT_TOKEN: ${SPRING_CLOUD_VAULT_TOKEN}
+        restart: always
+        networks:
+            - sausage-store
+
+    backend-report:
+        # используем либо готовый образ, либо делаем билд build: backend-report/
+        image: ${CI_REGISTRY_IMAGE}/sausage-backend-report:${CI_COMMIT_SHA}
+        container_name: sausage-store-backend-report
+        environment:
+            PORT: 8080
+            DB: ${REPORTS_MONGODB_URI}
+        restart: always
+        networks:
+            - sausage-store
+
+    frontend:
+        image: ${CI_REGISTRY_IMAGE}/sausage-frontend:${CI_COMMIT_SHA}
+        # gitlab.praktikum-services.ru:5050/std-033-68/sausage-store/sausage-frontend:1.0.1685298
+        container_name: sausage-store-frontend
+        restart: always
+        ports:
+            - "80:80"
+        networks:
+            - sausage-store
+
+networks:
+    sausage-store:

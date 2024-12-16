@@ -50,7 +50,7 @@ sonarqube-backend-sast:
     - build
   image: maven:3.8-openjdk-16
   variables:
-    SONAR_USER_HOME: "${CI_PROJECT_DIR}/backend/.sonar"  # Defines the location of the analysis task cache
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/backend/.sonar"
     GIT_DEPTH: "0"
     SPRING_FLYWAY_ENABLED: "false"
   cache:
@@ -83,32 +83,30 @@ release:
 
 deploy-backend:
   stage: deploy
-  image: vault:1.11.3
-  variables:
-    SPRING_CLOUD_VAULT_ENABLED: false
-
+  image: hashicorp/vault:1.18.2
+  environment:
+    name: production/backend
   before_script:
-    - apk add openssh-client bash gettext
+    - apk add openssh-client bash gettext docker docker-cli-compose
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-# подставим переменные в скрипт deploy.sh и выполним его на целевом хосте, где развернем сосисочный бэкенд
+    - docker context create remote --description "remote ssh" --docker "host=ssh://${DEV_USER}@${DEV_HOST}"
   script:
-    - export VAULT_TOKEN="$(vault write -field=token auth/jwt/login role=sausage-store jwt=$CI_JOB_JWT)"
-    - export "VERSION=${VERSION}"
-    - export "CI_REGISTRY=${CI_REGISTRY}"
-    - export "CI_REGISTRY_USER=${CI_REGISTRY_USER}"
-    - export "CI_REGISTRY_PASSWORD=${CI_REGISTRY_PASSWORD}"
-    - export "CI_REGISTRY_IMAGE=${CI_REGISTRY_IMAGE}"
-    - export "SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}"
-    - export "SPRING_DATASOURCE_USERNAME=$(vault kv get -field=spring.datasource.username secret/sausage-store)"
-    - export "SPRING_DATASOURCE_PASSWORD=$(vault kv get -field=spring.datasource.password secret/sausage-store)"
-    - export "SPRING_DATA_MONGODB_URI=$(vault kv get -field=spring.data.mongodb.uri secret/sausage-store)"
-    - export "SPRING_CLOUD_VAULT_TOKEN=$VAULT_TOKEN"
-    - envsubst < ./backend/deploy.sh | ssh ${DEV_USER}@${DEV_HOST}
+    - export "VAULT_TOKEN=$(vault write -field=token auth/jwt/login role=sausage-store jwt=$CI_JOB_JWT)"
+    - echo "SPRING_CLOUD_VAULT_TOKEN=${VAULT_TOKEN}" >> deploy.env
+    - echo "VERSION=${VERSION}" >> deploy.env
+    - echo "SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}" >> deploy.env
+    - echo "SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}" >> deploy.env
+    - echo "SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}" >> deploy.env
+    - echo "SPRING_DATA_MONGODB_URI=${SPRING_DATA_MONGODB_URI}" >> deploy.env
+    - echo "REPORT_PATH=/var/www-data/htdocs" >> deploy.env
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+    - docker --context remote compose down backend || true
+    - docker --context remote compose --env-file deploy.env up backend -d --pull "always" --force-recreate
 
 telegram-notification-backend:
   stage: notify

@@ -7,7 +7,8 @@ COPY ./src ./src
 COPY *.xml ./
 # копируем CA-сертификат Яндекса в образ, после команды mvn package в папке target создастся jar-файл с сервсисом сосисочного бэкенда
 RUN wget -O YandexInternalRootCA.crt https://storage.yandexcloud.net/cloud-certs/CA.pem \
-  && mvn package -Dversion.application=${VERSION} -Dverofapp=${VERSION} -Dmaven.test.skip=true
+  && mvn package -Dversion.application=${VERSION} -Dverofapp=${VERSION} -Dmaven.test.skip=true \
+  && chmod a+w /usr/src/app
 
 # шаг релиза, jre - базовый runtime для java-приложения 
 FROM bellsoft/liberica-runtime-container:jre-17-slim-musl
@@ -22,7 +23,7 @@ RUN keytool -importcert -file YandexInternalRootCA.crt \
   -alias yandex -cacerts -storepass changeit -noprompt \
   && rm -rf YandexInternalRootCA.crt \
   && addgroup --system jaruser \
-  && adduser -S -s /bin/false -G jaruser jaruser -D -H
+  && adduser -S -s /bin/false -G jaruser jaruser -D -H 
 # cоздавать домашнюю папку для сервисных пользователей в общем случае не рекомендуется по соображениям безопасности, так взломать доступ сложнее
 # копируем собранный артефакт в папку /app
 COPY --chown=jaruser:jaruser \
