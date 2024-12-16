@@ -8,11 +8,13 @@ RUN npm install
 RUN npm run build
 
 # NGINX step
-FROM nginx:stable-alpine3.17-slim
-WORKDIR /app
-# копируем файлы из билдера
-COPY --from=builder /usr/src/app/dist/frontend ./frontend
-COPY ./default.conf /etc/nginx/conf.d/default.conf
+FROM nginxproxy/nginx-proxy:1.3.1-alpine
+#WORKDIR /app
+#COPY --from=builder /usr/src/app/dist/frontend ./frontend
+#COPY ./default.conf /etc/nginx/conf.d/default.conf
+# new
+COPY --from=builder /usr/src/app/dist/frontend /usr/share/nginx/html
+COPY --from=builder /usr/src/app/nginx.tmpl /app/nginx.tmpl
 EXPOSE 80
 
 # docker run -d -p 8080:8080 <image-name>

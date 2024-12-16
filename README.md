@@ -39,3 +39,7 @@ Then open your browser and go to [http://localhost](http://localhost)
 ### Backend-report
 
 Go lang app, build and start by Docker
+
+## Nginx balancer
+
+Create nginx template, add it to runner stage in frontend/Dockerfile

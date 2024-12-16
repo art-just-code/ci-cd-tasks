@@ -28,9 +28,6 @@ WORKDIR /root/
 # Copy Yandex Cloud Certificate Authority
 COPY --from=builder /app/YandexInternalRootCA.crt /usr/local/share/ca-certificates/
 RUN apk --no-cache add ca-certificates && update-ca-certificates
-#RUN keytool -importcert -file YandexInternalRootCA.crt \
-#  -alias yandex-mongodb -cacerts -storepass changeit -noprompt \
-#  && rm -rf YandexInternalRootCA.crt
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/main .
@@ -42,4 +39,4 @@ EXPOSE 8080
 # Command to run the executable
 CMD ["./main"] 
 
-# docker build --build-arg DB=mongodb://localhost:27017/reports --build-arg PORT=8080 -t backend-report-go .
+# docker build --build-arg DB=mongodb://std-033-68:Testusr1234@rc1a-eelq45c34tajcv5k.mdb.yandexcloud.net:27018/std-033-68?tls=true --build-arg PORT=8080 -t backend-report-go .
