@@ -1,10 +1,10 @@
 Look at the branches =>
 
-notification - into TG
+notification - after deploy job send message to TG chat
 
 jenkins - example ci/cd pipeline by Jenkins
 
-nexus-upload - upload stage into Nexus
+nexus-upload - upload stage to Nexus repository, after that - deploy from it
 
 docker - ci/cd pipeline with release and deploy use by docker
 
